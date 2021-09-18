@@ -1,0 +1,93 @@
+//Soil Moisture Sensor Prototype 00
+//09/17/2021
+//KPsarev
+//
+//Monitors soil moisture content, printing analog value and percent conversion value over serial.
+//Piezo buzzer sounds to warn of low (<=10%) moisture content.
+//Set AIR and WATER capacitance values by updating airValue and waterValue variables.
+//Calibrate by running program and recording max/min analog values recorded by sensor (dry and submerged in H20).
+//System sleeps for 8 seconds between readings. Manipulate LowPower.idle line for increased length of sleep.
+
+
+
+#include <LowPower.h> //Low power idle library
+const int piezo = 3; //piezo buzzer on D3
+const int sensorPower = 8; //Vdd for sensor on D8
+const int icLED = 13; // built-on Arduino Nano LED on D13
+const int airValue = 840; //sensor calibration; value of capacitance in AIR 
+const int waterValue = 360; //sensor calibration; value of capacitance in WATER
+int sensorValue = 0; //variable for storing sensor value
+int soilMoisturePercent = 0; //variable for moisture in percent
+
+void setup() {
+  buzzer(); //sound power-on tone
+  Serial.begin(9600); //open serial port 9600 baud
+  delay(100);
+  Serial.print("initalize");
+  Serial.print('\n');
+  pinMode(sensorPower, OUTPUT); //set sensor Vdd pin as OUTPUT
+  digitalWrite(sensorPower, LOW); //set pin state to LOW
+  delay(500);
+}
+
+void loop() {
+ 
+  Serial.print("wake");
+  Serial.print('\n');
+  LEDblink(); //blink LED at start of loop to confirm operation
+  digitalWrite(sensorPower, HIGH); //pull sensor Vdd pin HIGH to power sensor
+  delay(5000); //allow sensor to stabilize
+  sensorValue=analogRead(A0); //read sensor analog signal
+  Serial.print(sensorValue); //print sensor analog signal value
+  Serial.print(" ");
+  Serial.print("analog sensor value");
+  Serial.print('\n'); //index to next line
+  delay(200);
+  digitalWrite(sensorPower,LOW); //pull sensor Vdd pin LOW to turn off sensor
+  soilMoisturePercent = map(sensorValue, airValue, waterValue, 0, 100); //re-map sensor value output (350-850 range) from 0 to 100
+  
+  if(soilMoisturePercent >=100) { //if moisture content is at or above 100%, print "100%"
+    Serial.println("100%");
+    Serial.println('\n');
+  }
+  else if(soilMoisturePercent <=10) { //if moisture content is at or below 10%, print "<10%" and play warning tone
+    Serial.print("below 10%");
+    Serial.print('\n');
+    warning();
+     
+  }
+  else if(soilMoisturePercent >10 && soilMoisturePercent <100) {  //if moisture content is between 10% and 100% print percent moisture value
+    Serial.print(soilMoisturePercent);
+    Serial.print("% moisture content");
+    Serial.print('\n');
+
+  }
+  Serial.println("sleep");
+  delay(500);
+  LowPower.idle(SLEEP_8S, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART0_OFF, TWI_OFF);
+  delay(500);
+
+}
+
+void buzzer() { //tone to announce succesful boot
+  tone(piezo, 1000, 500);
+}
+
+void warning()  { //warning tone to signal low moisture content
+  tone(piezo, 2000, 500);
+}
+
+void LEDblink(){ //blink LED to signal start of loop
+  
+  digitalWrite(icLED, HIGH);
+  delay(50);
+  digitalWrite(icLED, LOW);
+  delay(50);
+  digitalWrite(icLED, HIGH);
+  delay(50);
+  digitalWrite(icLED, LOW);
+  delay(50);
+  digitalWrite(icLED, HIGH);
+  delay(50);
+  digitalWrite(icLED, LOW);
+}
